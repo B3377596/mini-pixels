@@ -3,6 +3,10 @@
 //
 
 #include "vector/DecimalColumnVector.h"
+#include <cmath>
+#include <string>
+#include <stdexcept>
+#include <sstream>
 
 /**
  * The decimal column vector with precision and scale.
@@ -65,4 +69,71 @@ int DecimalColumnVector::getPrecision() {
 
 int DecimalColumnVector::getScale() {
 	return scale;
+}
+
+void DecimalColumnVector::add(float value) {
+    if (writeIndex >= length) {
+        ensureSize(writeIndex * 2, true);
+    }
+
+    // 根据 scale 计算无缩放值
+    long unscaledValue = static_cast<long>(value * pow(10, scale));
+    
+    // 直接将无缩放值存储到 vector 数组中
+    vector[writeIndex++] = unscaledValue;
+
+    // 标记该位置非空
+    isNull[writeIndex - 1] = false;
+}
+
+void DecimalColumnVector::add(int value) {
+    if (writeIndex >= length) {
+        ensureSize(writeIndex * 2, true);
+    }
+
+    // 根据 scale 计算无缩放值
+    long unscaledValue = static_cast<long>(value * pow(10, scale));
+    
+    // 直接将无缩放值存储到 vector 数组中
+    vector[writeIndex++] = unscaledValue;
+
+    // 标记该位置非空
+    isNull[writeIndex - 1] = false;
+}
+
+void DecimalColumnVector::add(std::string &value) {
+    if (writeIndex >= length) {
+        ensureSize(writeIndex * 2, true);
+    }
+
+    // 将字符串转换为浮动值
+    float floatValue = std::stof(value);
+
+    // 根据 scale 计算无缩放值
+    long unscaledValue = static_cast<long>(floatValue * pow(10, scale));
+
+    // 直接将无缩放值存储到 vector 数组中
+    vector[writeIndex++] = unscaledValue;
+
+    // 标记该位置非空
+    isNull[writeIndex - 1] = false;
+}
+
+void DecimalColumnVector::ensureSize(uint64_t size, bool preserveData) {
+    ColumnVector::ensureSize(size, preserveData);
+
+    if (length < size) {
+        long *oldVector = vector;
+        posix_memalign(reinterpret_cast<void **>(&vector), 32, size * sizeof(long));
+
+        if (preserveData) {
+            std::copy(oldVector, oldVector + length, vector);
+        }
+
+        delete[] oldVector;
+
+        memoryUsage += static_cast<long>(sizeof(long) * (size - length));
+
+        length = size;
+    }
 }

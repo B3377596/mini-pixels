@@ -3,6 +3,11 @@
 //
 
 #include "vector/TimestampColumnVector.h"
+#include <string>
+#include <ctime>
+#include <stdexcept>
+#include <sstream>
+#include <iomanip>
 
 TimestampColumnVector::TimestampColumnVector(int precision, bool encoding): ColumnVector(VectorizedRowBatch::DEFAULT_SIZE, encoding) {
     TimestampColumnVector(VectorizedRowBatch::DEFAULT_SIZE, precision, encoding);
@@ -64,4 +69,60 @@ void TimestampColumnVector::set(int elementNum, long ts) {
     }
     times[elementNum] = ts;
     // TODO: isNull
+}
+
+void TimestampColumnVector::add(std::string &value) {
+    if (writeIndex >= length) {
+        ensureSize(writeIndex * 2, true);
+    }
+
+    // 假设时间格式为 "YYYY-MM-DD HH:MM:SS"
+    std::tm tm = {};
+    std::istringstream ss(value);
+    int index = writeIndex++;
+
+    // 将字符串解析为 tm 结构
+    ss >> std::get_time(&tm, "%Y-%m-%d %H:%M:%S");
+    if (ss.fail()) {
+        throw std::invalid_argument("Invalid timestamp format");
+    }
+
+    // 将 tm 转换为 time_t，表示自1970年1月1日以来的秒数
+    std::time_t time = std::mktime(&tm);
+    if (time == -1) {
+        throw std::runtime_error("Error converting to time_t");
+    }
+
+    // 将转换得到的时间戳（秒）存储到 times 数组中
+    set(index, static_cast<long>(time));  // 假设 set 函数将时间戳存储到 times 数组
+    isNull[index] = false;  // 标记该值非空
+}
+
+void TimestampColumnVector::add(int value) {
+    if (writeIndex >= length) {
+        ensureSize(writeIndex * 2, true);
+    }
+
+    int index = writeIndex++;
+
+    // 直接将传入的时间戳（秒）存储到 times 数组中
+    set(index, static_cast<long>(value));  // 将 int 转换为 long 类型时间戳
+    isNull[index] = false;  // 标记该值非空
+}
+
+void TimestampColumnVector::ensureSize(uint64_t size, bool preserveData) {
+    ColumnVector::ensureSize(size, preserveData);
+
+    if (length < size) {
+        long *oldVector = times;
+        posix_memalign(reinterpret_cast<void **>(&times), 32, size * sizeof(long));
+
+        if (preserveData) {
+            std::copy(oldVector, oldVector + length, times);
+        }
+
+        delete[] oldVector;
+        memoryUsage += static_cast<long>(sizeof(long) * (size - length));
+        length = size;
+    }
 }
