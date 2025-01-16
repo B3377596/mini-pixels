@@ -127,7 +127,6 @@ void PixelsConsumer::run() {
 
                     rowBatch->reset();
                 }
-
                 // 创建一个新的文件
                 if (rowCounter >= maxRowNum) {
                     if (rowBatch->rowCount != 0) {

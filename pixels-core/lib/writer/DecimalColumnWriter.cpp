@@ -19,6 +19,8 @@
  */
 #include "writer/DecimalColumnWriter.h"
 
+long DecimalColumnVector::DEFAULT_UNSCALED_VALUE = 0;
+
 DecimalColumnWriter::DecimalColumnWriter(std::shared_ptr<TypeDescription> type, std::shared_ptr<PixelsWriterOption> writerOption)
     : ColumnWriter(type, writerOption)
 {
@@ -66,7 +68,7 @@ void DecimalColumnWriter::writeCurPartDecimal(std::shared_ptr<DecimalColumnVecto
         if (columnVector->isNull[i + curPartOffset]) {
             hasNull = true;
             if (nullsPadding) {
-                curPixelVector[curPixelVectorIndex++] = DecimalColumnVector::DEFAULT_UNSCALED_VALUE; // 默认未缩放的值
+                curPixelVector[curPixelVectorIndex++] = DecimalColumnVector::DEFAULT_UNSCALED_VALUE; 
             }
         } else {
             curPixelVector[curPixelVectorIndex++] = values[i + curPartOffset];  // 直接将值添加到 curPixelVector 中

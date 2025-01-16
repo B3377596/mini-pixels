@@ -67,7 +67,6 @@ void DateColumnVector::add(std::string &value) {
 	if (writeIndex >= length) {
         ensureSize(writeIndex * 2, true);
     }
-    // 假设日期格式为 "YYYY-MM-DD"
     std::tm tm = {};
     std::istringstream ss(value);
     int index = writeIndex++;

@@ -36,8 +36,7 @@ int DateColumnWriter::write(std::shared_ptr<ColumnVector> vector, int length) {
         throw std::invalid_argument("Invalid vector type");
     }
 
-    int* values = columnVector->dates;  // 获取日期列向量的数据
-
+    long* values = (long*)columnVector->dates;  // 获取日期列向量的数据
     int curPartLength;
     int curPartOffset = 0;
     int nextPartLength = length;
@@ -83,7 +82,7 @@ void DateColumnWriter::newPixel() {
     ColumnWriter::newPixel();
 }
 
-void DateColumnWriter::writeCurPartTime(std::shared_ptr<DateColumnVector> columnVector, long* values, int curPartLength, int curPartOffset) {
+void DateColumnWriter::writeCurPartTime(std::shared_ptr<ColumnVector> columnVector, long* values, int curPartLength, int curPartOffset) {
     for (int i = 0; i < curPartLength; i++) {
         curPixelEleIndex++;
         if (columnVector->isNull[i + curPartOffset]) {
