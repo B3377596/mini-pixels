@@ -17,3 +17,101 @@
  * License along with Pixels.  If not, see
  * <https://www.gnu.org/licenses/>.
  */
+#include "writer/DateColumnWriter.h"
+#include "utils/BitUtils.h"
+
+DateColumnWriter::DateColumnWriter(std::shared_ptr<TypeDescription> type, std::shared_ptr<PixelsWriterOption> writerOption)
+    : ColumnWriter(type, writerOption), curPixelVector(pixelStride)
+{
+    runlengthEncoding = writerOption->getEncodingLevel().ge(EncodingLevel::Level::EL2);
+    if (runlengthEncoding) {
+        encoder = std::make_unique<RunLenIntEncoder>();
+    }
+}
+
+int DateColumnWriter::write(std::shared_ptr<ColumnVector> vector, int length) {
+    std::cout << "In DateColumnWriter" << std::endl;
+    auto columnVector = std::static_pointer_cast<DateColumnVector>(vector);
+    if (!columnVector) {
+        throw std::invalid_argument("Invalid vector type");
+    }
+
+    int* values = columnVector->dates;  // 获取日期列向量的数据
+
+    int curPartLength;
+    int curPartOffset = 0;
+    int nextPartLength = length;
+
+    while ((curPixelIsNullIndex + nextPartLength) >= pixelStride) {
+        curPartLength = pixelStride - curPixelIsNullIndex;
+        writeCurPartTime(columnVector, values, curPartLength, curPartOffset);
+        newPixel();
+        curPartOffset += curPartLength;
+        nextPartLength = length - curPartOffset;
+    }
+
+    curPartLength = nextPartLength;
+    writeCurPartTime(columnVector, values, curPartLength, curPartOffset);
+
+    return outputStream->getWritePos();
+}
+
+void DateColumnWriter::close() {
+    if (runlengthEncoding && encoder) {
+        encoder->clear();
+    }
+    ColumnWriter::close();
+}
+
+void DateColumnWriter::newPixel() {
+    if (runlengthEncoding) {
+        std::vector<byte> buffer(curPixelVector.size() * sizeof(int));
+        int resLen;
+        encoder->encode(curPixelVector.data(), buffer.data(), curPixelVector.size(), resLen);
+        outputStream->putBytes(buffer.data(), resLen);
+    } else {
+        std::shared_ptr<ByteBuffer> curVecPartitionBuffer =
+            std::make_shared<ByteBuffer>(curPixelVector.size() * sizeof(int));
+        EncodingUtils encodingUtils;
+
+        for (int i = 0; i < curPixelVector.size(); i++) {
+            encodingUtils.writeIntLE(curVecPartitionBuffer, curPixelVector[i]);
+        }
+        outputStream->putBytes(curVecPartitionBuffer->getPointer(), curVecPartitionBuffer->getWritePos());
+    }
+
+    ColumnWriter::newPixel();
+}
+
+void DateColumnWriter::writeCurPartTime(std::shared_ptr<DateColumnVector> columnVector, long* values, int curPartLength, int curPartOffset) {
+    for (int i = 0; i < curPartLength; i++) {
+        curPixelEleIndex++;
+        if (columnVector->isNull[i + curPartOffset]) {
+            hasNull = true;
+            if (nullsPadding) {
+                curPixelVector[curPixelVectorIndex++] = 0; // 默认日期值 0 表示 NULL
+            }
+        } else {
+            curPixelVector[curPixelVectorIndex++] = values[i + curPartOffset];
+        }
+    }
+    std::copy(columnVector->isNull + curPartOffset, columnVector->isNull + curPartOffset + curPartLength, isNull.begin() + curPixelIsNullIndex);
+    curPixelIsNullIndex += curPartLength;
+}
+
+bool DateColumnWriter::decideNullsPadding(std::shared_ptr<PixelsWriterOption> writerOption) {
+    if (writerOption->getEncodingLevel().ge(EncodingLevel::Level::EL2)) {
+        return false;
+    }
+    return writerOption->isNullsPadding();
+}
+
+pixels::proto::ColumnEncoding DateColumnWriter::getColumnChunkEncoding() const {
+    pixels::proto::ColumnEncoding columnEncoding;
+    if (runlengthEncoding) {
+        columnEncoding.set_kind(pixels::proto::ColumnEncoding::Kind::ColumnEncoding_Kind_RUNLENGTH);
+    } else {
+        columnEncoding.set_kind(pixels::proto::ColumnEncoding::Kind::ColumnEncoding_Kind_NONE);
+    }
+    return columnEncoding;
+}
