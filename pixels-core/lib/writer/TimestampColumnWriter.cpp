@@ -36,7 +36,6 @@ int TimestampColumnWriter::write(std::shared_ptr<ColumnVector> vector, int lengt
     }
 
     long* values = columnVector->times;
-
     int curPartLength;
     int curPartOffset = 0;
     int nextPartLength = length;

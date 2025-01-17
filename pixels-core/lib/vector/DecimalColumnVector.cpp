@@ -31,7 +31,6 @@ DecimalColumnVector::DecimalColumnVector(uint64_t len, int precision, int scale,
     memoryUsage += (long) sizeof(long) * len;
     this->precision = precision;
     this->scale = scale;
-    memoryUsage += (uint64_t) sizeof(uint64_t) * len;
 }
 
 void DecimalColumnVector::close() {

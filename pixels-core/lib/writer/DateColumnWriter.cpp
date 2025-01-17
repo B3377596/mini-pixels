@@ -85,6 +85,7 @@ void DateColumnWriter::newPixel() {
 void DateColumnWriter::writeCurPartTime(std::shared_ptr<ColumnVector> columnVector, long* values, int curPartLength, int curPartOffset) {
     for (int i = 0; i < curPartLength; i++) {
         curPixelEleIndex++;
+        std::cout<<"vectorindex is "<<curPixelVectorIndex<<" size is "<<curPixelVector.size()<<std::endl;
         if (columnVector->isNull[i + curPartOffset]) {
             hasNull = true;
             if (nullsPadding) {

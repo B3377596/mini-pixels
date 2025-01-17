@@ -22,9 +22,8 @@
 long DecimalColumnVector::DEFAULT_UNSCALED_VALUE = 0;
 
 DecimalColumnWriter::DecimalColumnWriter(std::shared_ptr<TypeDescription> type, std::shared_ptr<PixelsWriterOption> writerOption)
-    : ColumnWriter(type, writerOption)
+    : ColumnWriter(type, writerOption), curPixelVector(pixelStride)
 {
-    // 根据需要初始化其他字段或设置
     runlengthEncoding = writerOption->getEncodingLevel().ge(EncodingLevel::Level::EL2);
     if (runlengthEncoding) {
         encoder = std::make_unique<RunLenIntEncoder>();
@@ -43,17 +42,18 @@ int DecimalColumnWriter::write(std::shared_ptr<ColumnVector> vector, int length)
     int curPartLength;
     int curPartOffset = 0;
     int nextPartLength = length;
-    columnVector->ensureSize(length, true);
     while ((curPixelIsNullIndex + nextPartLength) >= pixelStride) {
+        std::cout<<"curindex is "<<curPixelIsNullIndex<<std::endl;
+
         curPartLength = pixelStride - curPixelIsNullIndex;
-        writeCurPartDecimal(columnVector, values, curPartLength, curPartOffset);  // 写入当前部分的 decimal 数据
-        newPixel();  // 创建一个新的像素
+        writeCurPartDecimal(columnVector, values, curPartLength, curPartOffset); 
+        newPixel();  
         curPartOffset += curPartLength;
         nextPartLength = length - curPartOffset;
     }
 
     curPartLength = nextPartLength;
-    writeCurPartDecimal(columnVector, values, curPartLength, curPartOffset);  // 写入剩余的部分
+    writeCurPartDecimal(columnVector, values, curPartLength, curPartOffset); 
 
     return outputStream->getWritePos();  // 返回写入位置
 }
@@ -62,7 +62,7 @@ bool DecimalColumnWriter::decideNullsPadding(std::shared_ptr<PixelsWriterOption>
     return writerOption->isNullsPadding();  // 根据 PixelsWriterOption 来决定是否填充 null 值
 }
 
-void DecimalColumnWriter::writeCurPartDecimal(std::shared_ptr<DecimalColumnVector> columnVector, long* values, int curPartLength, int curPartOffset) {
+/*void DecimalColumnWriter::writeCurPartDecimal(std::shared_ptr<DecimalColumnVector> columnVector, long* values, int curPartLength, int curPartOffset) {
     for (int i = 0; i < curPartLength; i++) {
         curPixelEleIndex++;
         if (columnVector->isNull[i + curPartOffset]) {
@@ -71,12 +71,73 @@ void DecimalColumnWriter::writeCurPartDecimal(std::shared_ptr<DecimalColumnVecto
                 curPixelVector[curPixelVectorIndex++] = DecimalColumnVector::DEFAULT_UNSCALED_VALUE; 
             }
         } else {
-            curPixelVector[curPixelVectorIndex++] = values[i + curPartOffset];  // 直接将值添加到 curPixelVector 中
+            curPixelVector[curPixelVectorIndex++] = values[i + curPartOffset]; 
         }
     }
     std::copy(columnVector->isNull + curPartOffset, columnVector->isNull + curPartOffset + curPartLength, isNull.begin() + curPixelIsNullIndex);
-    curPixelIsNullIndex += curPartLength;  // 更新当前 null 索引
+    curPixelIsNullIndex += curPartLength;  
+}*/
+void DecimalColumnWriter::writeCurPartDecimal(
+    std::shared_ptr<DecimalColumnVector> columnVector, 
+    long* values, 
+    int curPartLength, 
+    int curPartOffset
+) {
+    // 检查 columnVector 是否为 nullptr
+    if (!columnVector) {
+        throw std::invalid_argument("columnVector is null");
+    }
+
+    // 检查 columnVector->isNull 是否为 nullptr
+    if (!columnVector->isNull) {
+        throw std::runtime_error("columnVector->isNull is not initialized");
+    }
+
+    // 检查 curPartOffset 和 curPartLength 的范围是否合法
+    if (curPartOffset < 0 || curPartOffset + curPartLength > columnVector->length) {
+        throw std::out_of_range("curPartOffset + curPartLength exceeds columnVector range");
+    }
+
+    // 检查 values 指针是否为 nullptr
+    if (!values) {
+        throw std::invalid_argument("values is null");
+    }
+
+    // 日志输出以便调试
+    std::cout << "curPartOffset: " << curPartOffset << ", curPartLength: " << curPartLength << std::endl;
+    std::cout << "columnVector->length: " << columnVector->length << std::endl;
+
+    for (int i = 0; i < curPartLength; i++) {
+        curPixelEleIndex++;
+        std::cout<<"vectorindex is "<<curPixelVectorIndex<<" size is "<<curPixelVector.size()<<std::endl;
+        if (curPixelVectorIndex >= curPixelVector.size()) {
+            throw std::out_of_range("curPixelVectorIndex exceeds curPixelVector size");
+        }
+
+        if (columnVector->isNull[i + curPartOffset]) {
+            hasNull = true;
+            if (nullsPadding) {
+                curPixelVector[curPixelVectorIndex++] = DecimalColumnVector::DEFAULT_UNSCALED_VALUE;
+            }
+        } else {
+            curPixelVector[curPixelVectorIndex++] = values[i + curPartOffset];
+        }
+    }
+    if (curPixelIsNullIndex + curPartLength > isNull.size()) {
+        throw std::out_of_range("isNull capacity is insufficient");
+    }
+
+    // 拷贝 isNull 数组
+    std::copy(
+        columnVector->isNull + curPartOffset,
+        columnVector->isNull + curPartOffset + curPartLength,
+        isNull.begin() + curPixelIsNullIndex
+    );
+
+    curPixelIsNullIndex += curPartLength;
+    std::cout << "writeCurPartDecimal completed successfully." << std::endl;
 }
+
 
 void DecimalColumnWriter::close() {
     if (runlengthEncoding && encoder) {
