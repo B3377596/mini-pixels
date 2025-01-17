@@ -27,8 +27,8 @@ DecimalColumnVector::DecimalColumnVector(int precision, int scale, bool encoding
 }
 
 DecimalColumnVector::DecimalColumnVector(uint64_t len, int precision, int scale, bool encoding): ColumnVector(len, encoding) {
-	// decimal column vector has no encoding so we don't allocate memory to this->vector
-	this->vector = nullptr;
+	posix_memalign(reinterpret_cast<void **>(&this->vector), 64,len * sizeof(long));
+    memoryUsage += (long) sizeof(long) * len;
     this->precision = precision;
     this->scale = scale;
     memoryUsage += (uint64_t) sizeof(uint64_t) * len;
@@ -75,14 +75,8 @@ void DecimalColumnVector::add(float value) {
     if (writeIndex >= length) {
         ensureSize(writeIndex * 2, true);
     }
-
-    // 根据 scale 计算无缩放值
     long unscaledValue = static_cast<long>(value * pow(10, scale));
-    
-    // 直接将无缩放值存储到 vector 数组中
     vector[writeIndex++] = unscaledValue;
-
-    // 标记该位置非空
     isNull[writeIndex - 1] = false;
 }
 
@@ -90,14 +84,8 @@ void DecimalColumnVector::add(int value) {
     if (writeIndex >= length) {
         ensureSize(writeIndex * 2, true);
     }
-
-    // 根据 scale 计算无缩放值
     long unscaledValue = static_cast<long>(value * pow(10, scale));
-    
-    // 直接将无缩放值存储到 vector 数组中
     vector[writeIndex++] = unscaledValue;
-
-    // 标记该位置非空
     isNull[writeIndex - 1] = false;
 }
 
@@ -105,17 +93,9 @@ void DecimalColumnVector::add(std::string &value) {
     if (writeIndex >= length) {
         ensureSize(writeIndex * 2, true);
     }
-
-    // 将字符串转换为浮动值
     float floatValue = std::stof(value);
-
-    // 根据 scale 计算无缩放值
     long unscaledValue = static_cast<long>(floatValue * pow(10, scale));
-
-    // 直接将无缩放值存储到 vector 数组中
     vector[writeIndex++] = unscaledValue;
-
-    // 标记该位置非空
     isNull[writeIndex - 1] = false;
 }
 

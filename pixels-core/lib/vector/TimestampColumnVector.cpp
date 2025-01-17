@@ -15,12 +15,8 @@ TimestampColumnVector::TimestampColumnVector(int precision, bool encoding): Colu
 
 TimestampColumnVector::TimestampColumnVector(uint64_t len, int precision, bool encoding): ColumnVector(len, encoding) {
     this->precision = precision;
-    if(encoding) {
-        posix_memalign(reinterpret_cast<void **>(&this->times), 64,
-                       len * sizeof(long));
-    } else {
-        this->times = nullptr;
-    }
+    posix_memalign(reinterpret_cast<void **>(&this->times), 64,len * sizeof(long));
+    memoryUsage += (long) sizeof(long) * len;
 }
 
 
@@ -75,13 +71,9 @@ void TimestampColumnVector::add(std::string &value) {
     if (writeIndex >= length) {
         ensureSize(writeIndex * 2, true);
     }
-
-    // 假设时间格式为 "YYYY-MM-DD HH:MM:SS"
     std::tm tm = {};
     std::istringstream ss(value);
     int index = writeIndex++;
-
-    // 将字符串解析为 tm 结构
     ss >> std::get_time(&tm, "%Y-%m-%d %H:%M:%S");
     if (ss.fail()) {
         throw std::invalid_argument("Invalid timestamp format");
@@ -93,8 +85,8 @@ void TimestampColumnVector::add(std::string &value) {
         throw std::runtime_error("Error converting to time_t");
     }
 
-    // 将转换得到的时间戳（秒）存储到 times 数组中
-    set(index, static_cast<long>(time));  // 假设 set 函数将时间戳存储到 times 数组
+    std::cout<<"time is "<<time<<std::endl;
+    set(index, static_cast<long>(time));  
     isNull[index] = false;  // 标记该值非空
 }
 

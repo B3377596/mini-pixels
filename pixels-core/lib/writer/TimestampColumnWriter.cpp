@@ -30,12 +30,12 @@ TimestampColumnWriter::TimestampColumnWriter(std::shared_ptr<TypeDescription> ty
 
 int TimestampColumnWriter::write(std::shared_ptr<ColumnVector> vector, int length) {
     std::cout << "In TimestampColumnWriter" << std::endl;
-    auto columnVector = std::static_pointer_cast<LongColumnVector>(vector);
+    auto columnVector = std::static_pointer_cast<TimestampColumnVector>(vector);
     if (!columnVector) {
         throw std::invalid_argument("Invalid vector type");
     }
 
-    long* values = columnVector->longVector;
+    long* values = columnVector->times;
 
     int curPartLength;
     int curPartOffset = 0;
@@ -48,10 +48,8 @@ int TimestampColumnWriter::write(std::shared_ptr<ColumnVector> vector, int lengt
         curPartOffset += curPartLength;
         nextPartLength = length - curPartOffset;
     }
-
     curPartLength = nextPartLength;
     writeCurPartTimestamp(columnVector, values, curPartLength, curPartOffset);
-
     return outputStream->getWritePos();
 }
 
