@@ -83,16 +83,18 @@ void DateColumnWriter::newPixel() {
 }
 
 void DateColumnWriter::writeCurPartTime(std::shared_ptr<ColumnVector> columnVector, long* values, int curPartLength, int curPartOffset) {
+    int* v=(int*)values;
     for (int i = 0; i < curPartLength; i++) {
         curPixelEleIndex++;
         std::cout<<"vectorindex is "<<curPixelVectorIndex<<" size is "<<curPixelVector.size()<<std::endl;
         if (columnVector->isNull[i + curPartOffset]) {
             hasNull = true;
             if (nullsPadding) {
-                curPixelVector[curPixelVectorIndex++] = 0; // 默认日期值 0 表示 NULL
+                curPixelVector[curPixelVectorIndex++] = 0; 
             }
         } else {
-            curPixelVector[curPixelVectorIndex++] = values[i + curPartOffset];
+            std::cout<<"write "<<v[i + curPartOffset]<<std::endl;
+            curPixelVector[curPixelVectorIndex++] = v[i + curPartOffset];
         }
     }
     std::copy(columnVector->isNull + curPartOffset, columnVector->isNull + curPartOffset + curPartLength, isNull.begin() + curPixelIsNullIndex);

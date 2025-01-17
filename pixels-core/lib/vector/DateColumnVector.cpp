@@ -44,13 +44,10 @@ DateColumnVector::~DateColumnVector() {
      * @param days
  */
 void DateColumnVector::set(int elementNum, int days) {
-    std::cout<<"enter set"<<std::endl;
 	if(elementNum >= writeIndex) {
 		writeIndex = elementNum + 1;
 	}
-    std::cout<<"index is "<<elementNum<<std::endl;
 	dates[elementNum] = days;
-	// TODO: isNull
 }
 
 void * DateColumnVector::current() {
@@ -75,8 +72,6 @@ void DateColumnVector::add(std::string &value) {
     if (ss.fail()) {
         throw std::invalid_argument("Invalid date format");
     }
-
-    // 将 tm 转换为 time_t，表示自1970年1月1日以来的秒数
     std::time_t time = std::mktime(&tm);
     if (time == -1) {
         throw std::runtime_error("Error converting to time_t");

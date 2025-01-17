@@ -67,6 +67,7 @@ bool PixelsWriterImpl::addRowBatch(std::shared_ptr<VectorizedRowBatch> rowBatch)
         curRowGroupNumOfRows=0L;
         return false;
     }
+    
     return true;
 }
 

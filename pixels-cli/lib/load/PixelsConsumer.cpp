@@ -127,7 +127,6 @@ void PixelsConsumer::run() {
                 if (rowBatch->rowCount == rowBatch->getMaxSize()) {
                     std::cout << "writing row group to file: " << targetFilePath << " rowCount:"<<rowBatch->rowCount<<std::endl;
                     pixelsWriter->addRowBatch(rowBatch);
-
                     rowBatch->reset();
                 }
                 // 创建一个新的文件
