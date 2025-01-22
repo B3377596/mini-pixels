@@ -24,6 +24,7 @@ DateColumnWriter::DateColumnWriter(std::shared_ptr<TypeDescription> type, std::s
     : ColumnWriter(type, writerOption), curPixelVector(pixelStride)
 {
     runlengthEncoding = writerOption->getEncodingLevel().ge(EncodingLevel::Level::EL2);
+    runlengthEncoding=false;
     if (runlengthEncoding) {
         encoder = std::make_unique<RunLenIntEncoder>();
     }
@@ -35,7 +36,6 @@ int DateColumnWriter::write(std::shared_ptr<ColumnVector> vector, int length) {
     if (!columnVector) {
         throw std::invalid_argument("Invalid vector type");
     }
-
     long* values = (long*)columnVector->dates;  // 获取日期列向量的数据
     int curPartLength;
     int curPartOffset = 0;

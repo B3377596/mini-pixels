@@ -25,6 +25,7 @@ DecimalColumnWriter::DecimalColumnWriter(std::shared_ptr<TypeDescription> type, 
     : ColumnWriter(type, writerOption), curPixelVector(pixelStride)
 {
     runlengthEncoding = writerOption->getEncodingLevel().ge(EncodingLevel::Level::EL2);
+    runlengthEncoding =false;
     if (runlengthEncoding) {
         encoder = std::make_unique<RunLenIntEncoder>();
     }
@@ -120,22 +121,19 @@ void DecimalColumnWriter::writeCurPartDecimal(
                 curPixelVector[curPixelVectorIndex++] = DecimalColumnVector::DEFAULT_UNSCALED_VALUE;
             }
         } else {
+            std::cout<<"num is "<<values[i+curPartOffset]<<std::endl;
             curPixelVector[curPixelVectorIndex++] = values[i + curPartOffset];
         }
     }
     if (curPixelIsNullIndex + curPartLength > isNull.size()) {
         throw std::out_of_range("isNull capacity is insufficient");
     }
-
-    // 拷贝 isNull 数组
     std::copy(
         columnVector->isNull + curPartOffset,
         columnVector->isNull + curPartOffset + curPartLength,
         isNull.begin() + curPixelIsNullIndex
     );
-
     curPixelIsNullIndex += curPartLength;
-    std::cout << "writeCurPartDecimal completed successfully." << std::endl;
 }
 
 

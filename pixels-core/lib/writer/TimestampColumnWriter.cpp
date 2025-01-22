@@ -23,6 +23,7 @@ TimestampColumnWriter::TimestampColumnWriter(std::shared_ptr<TypeDescription> ty
     : ColumnWriter(type, writerOption), curPixelVector(pixelStride) 
 {
     runlengthEncoding = writerOption->getEncodingLevel().ge(EncodingLevel::Level::EL2);
+    runlengthEncoding=false;
     if (runlengthEncoding) {
         encoder = std::make_unique<RunLenIntEncoder>();
     }
@@ -88,6 +89,7 @@ void TimestampColumnWriter::writeCurPartTimestamp(std::shared_ptr<ColumnVector> 
                 curPixelVector[curPixelVectorIndex++] = 0L;
             }
         } else {
+            std::cout<<"write "<<values[i + curPartOffset]<<std::endl;
             curPixelVector[curPixelVectorIndex++] = values[i + curPartOffset];
         }
     }

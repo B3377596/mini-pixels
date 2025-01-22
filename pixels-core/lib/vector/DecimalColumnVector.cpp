@@ -92,8 +92,9 @@ void DecimalColumnVector::add(std::string &value) {
     if (writeIndex >= length) {
         ensureSize(writeIndex * 2, true);
     }
-    float floatValue = std::stof(value);
-    long unscaledValue = static_cast<long>(floatValue * pow(10, scale));
+    double doublevalue = std::stod(value);
+    double scaleFactor = std::pow(10, scale);
+    long unscaledValue= static_cast<long>(std::round(doublevalue * scaleFactor));
     vector[writeIndex++] = unscaledValue;
     isNull[writeIndex - 1] = false;
 }
