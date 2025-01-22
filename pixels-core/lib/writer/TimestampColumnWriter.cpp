@@ -35,7 +35,6 @@ int TimestampColumnWriter::write(std::shared_ptr<ColumnVector> vector, int lengt
     if (!columnVector) {
         throw std::invalid_argument("Invalid vector type");
     }
-
     long* values = columnVector->times;
     int curPartLength;
     int curPartOffset = 0;
@@ -90,7 +89,7 @@ void TimestampColumnWriter::writeCurPartTimestamp(std::shared_ptr<ColumnVector> 
             }
         } else {
             std::cout<<"write "<<values[i + curPartOffset]<<std::endl;
-            curPixelVector[curPixelVectorIndex++] = values[i + curPartOffset];
+            curPixelVector[curPixelVectorIndex++] = values[i + curPartOffset]*1e6;
         }
     }
     std::copy(columnVector->isNull + curPartOffset, columnVector->isNull + curPartOffset + curPartLength, isNull.begin() + curPixelIsNullIndex);

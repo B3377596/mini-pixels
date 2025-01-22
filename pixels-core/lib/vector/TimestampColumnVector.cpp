@@ -9,11 +9,11 @@
 #include <sstream>
 #include <iomanip>
 
-TimestampColumnVector::TimestampColumnVector(int precision, bool encoding): ColumnVector(VectorizedRowBatch::DEFAULT_SIZE, encoding) {
+TimestampColumnVector::TimestampColumnVector(int precision=0, bool encoding): ColumnVector(VectorizedRowBatch::DEFAULT_SIZE, encoding) {
     TimestampColumnVector(VectorizedRowBatch::DEFAULT_SIZE, precision, encoding);
 }
 
-TimestampColumnVector::TimestampColumnVector(uint64_t len, int precision, bool encoding): ColumnVector(len, encoding) {
+TimestampColumnVector::TimestampColumnVector(uint64_t len, int precision=0, bool encoding): ColumnVector(len, encoding) {
     this->precision = precision;
     posix_memalign(reinterpret_cast<void **>(&this->times), 64,len * sizeof(long));
     memoryUsage += (long) sizeof(long) * len;
@@ -78,15 +78,12 @@ void TimestampColumnVector::add(std::string &value) {
     if (ss.fail()) {
         throw std::invalid_argument("Invalid timestamp format");
     }
-
-    // 将 tm 转换为 time_t，表示自1970年1月1日以来的秒数
     std::time_t time = std::mktime(&tm);
     if (time == -1) {
         throw std::runtime_error("Error converting to time_t");
     }
-
     std::cout<<"time is "<<time<<std::endl;
-    set(index, static_cast<long>(time));  
+    times[index]=time;
     isNull[index] = false;  // 标记该值非空
 }
 
@@ -96,10 +93,8 @@ void TimestampColumnVector::add(int value) {
     }
 
     int index = writeIndex++;
-
-    // 直接将传入的时间戳（秒）存储到 times 数组中
-    set(index, static_cast<long>(value));  // 将 int 转换为 long 类型时间戳
-    isNull[index] = false;  // 标记该值非空
+    set(index, static_cast<long>(value)); 
+    isNull[index] = false;
 }
 
 void TimestampColumnVector::ensureSize(uint64_t size, bool preserveData) {

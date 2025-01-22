@@ -112,11 +112,8 @@ void PixelsConsumer::run() {
                 boost::sregex_token_iterator it(line.begin(), line.end(), boost::regex(regex), -1);
                 for (; it != boost::sregex_token_iterator(); ++it) {
                     colsInLine.push_back(*it);
-                    std::cout<<"now parse "<<*it<<std::endl;
                 }
-                std::cout<<"end read"<<std::endl;
                 for(int i = 0; i < columnVectors.size(); ++i) {
-                    std::cout<<"loop "<<i<<std::endl;
                     if (i > colsInLine.size() || colsInLine[i].empty() || colsInLine[i] == "\\N") {
                         columnVectors[i]->addNull();
                     } else {
